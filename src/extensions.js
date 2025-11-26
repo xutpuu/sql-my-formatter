@@ -1,46 +1,91 @@
-import * as vscode from 'vscode';
+// src/extension.js
+const vscode = require('vscode');
+
 function formatSqlMyWay(sql) {
+    if (!sql.trim()) return sql;
+
     return sql
-        // 1. Ключевые слова в верхний регистр
-        .replace(/\b(SELECT|FROM|WHERE|AND|OR|INNER JOIN|LEFT JOIN|RIGHT JOIN|ON|GROUP BY|ORDER BY|HAVING|LIMIT|INSERT INTO|VALUES|UPDATE|SET|DELETE|CREATE TABLE|ALTER TABLE|AS)\b/gi, match => match.toUpperCase())
-        // 2. Убираем лишние пробелы
+        // 1. Все ключевые слова — в UPPERCASE
+        .replace(/\b(SELECT|FROM|WHERE|AND|OR|INNER\s+JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|FULL\s+JOIN|JOIN|ON|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|UNION\s+ALL|WITH|INSERT\s+INTO|VALUES|UPDATE|SET|DELETE|CREATE\s+TABLE|ALTER\s+TABLE|AS)\b/gi, 
+            match => match.toUpperCase())
+
+        // 2. Нормализуем пробелы + скобки
         .replace(/\s+/g, ' ')
+        .replace(/\(/g, ' ( ')
+        .replace(/\)/g, ' ) ')
         .trim()
-        // 3. Каждое основное предложение с новой строки
-        .replace(/ (FROM|WHERE|AND|OR|INNER JOIN|LEFT JOIN|RIGHT JOIN|ON|GROUP BY|ORDER BY|HAVING|LIMIT)/gi, '\n$1')
-        // 4. JOIN-ы выравниваем
-        .replace(/\n(INNER|LEFT|RIGHT) JOIN/g, '\n $1 JOIN')
-        // 5. ON тоже отступаем
-        .replace(/\nON /gi, '\n    ON ')
-        // 6. Запятые в SELECT — с новой строки и отыступом (мой любимый стиль)
-        .replace(/,(\s*)/g, ',\n    ')
-        // 7. Финальная красота
+
+        // 3. Запятые с новой строки + 4 пробела (твой любимый стиль)
+        .replace(/,\s*/g, ',\n    ')
+
+        // 4. Основные клаузы с новой строки
+        .replace(/\s+(FROM|WHERE|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|JOIN|ON|GROUP BY|ORDER BY|HAVING|LIMIT|OFFSET|UNION|UNION ALL|WITH|INSERT INTO|VALUES|UPDATE|SET)\s+/gi, '\n$1 ')
+
+        // 5. Магия с отступами
         .split('\n')
-        .map(line => line.trimEnd())
-        .join('\n') + '\n';
+        .map(line => {
+            const trimmed = line.trim();
+            if (!trimmed) return '';
+
+            // SELECT без отступа
+            if (trimmed === 'SELECT') return 'SELECT';
+
+            // Столбцы после SELECT — 4 пробела
+            if (line.includes('SELECT') && trimmed !== 'SELECT') {
+                return '    ' + trimmed;
+            }
+
+            // FROM, WHERE, JOIN и т.д. — без отступа
+            if (/^(FROM|WHERE|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|UNION|WITH|INSERT INTO|UPDATE|SET|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|JOIN)/i.test(trimmed)) {
+                return trimmed;
+            }
+
+            // ON — 4 пробела
+            if (/^ON /i.test(trimmed)) {
+                return '    ' + trimmed;
+            }
+
+            // AND / OR после WHERE — 4 пробела
+            if (/^(AND|OR) /i.test(trimmed)) {
+                return '    ' + trimmed;
+            }
+
+            // Всё остальное — на всякий случай 4 пробела
+            return '    ' + trimmed;
+        })
+        .join('\n')
+        .replace(/\n+/g, '\n')
+        .trim() + '\n';
 }
-export function activate(context) {
-    const disposable = vscode.commands.registerCommand('sqlMyWay.format', () => {
+
+function activate(context) {
+    let disposable = vscode.commands.registerCommand('sql-my-formatter.formatMyWay', () => {
         const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document.languageId !== 'sql') {
+        if (!editor) return;
+
+        if (editor.document.languageId !== 'sql') {
+            vscode.window.showInformationMessage('Только для SQL-файлов, братан :)');
             return;
         }
+
         const fullText = editor.document.getText();
         const formatted = formatSqlMyWay(fullText);
+
         editor.edit(editBuilder => {
-            const fullRange = new vscode.Range(editor.document.positionAt(0), editor.document.positionAt(fullText.length));
-            editBuilder.replace(fullRange, formatted);
+            const range = new vscode.Range(
+                editor.document.positionAt(0),
+                editor.document.positionAt(fullText.length)
+            );
+            editBuilder.replace(range, formatted);
         });
     });
-    // Автоформат при сохранении (по желанию)
-    vscode.workspace.onWillSaveTextDocument(e => {
-        if (e.document.languageId === 'sql') {
-            e.waitUntil(Promise.resolve([
-                vscode.TextEdit.replace(new vscode.Range(e.document.positionAt(0), e.document.positionAt(e.document.getText().length)), formatSqlMyWay(e.document.getText()))
-            ]));
-        }
-    });
+
     context.subscriptions.push(disposable);
 }
-export function deactivate() { }
-//# sourceMappingURL=extensions.js.map
+
+function deactivate() {}
+
+module.exports = {
+    activate,
+    deactivate
+};

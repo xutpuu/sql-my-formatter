@@ -1,22 +1,29 @@
 {
   "name": "sql-my-formatter",
+  "displayName": "My Perfect SQL Formatter",
+  "description": "Форматирует SQL ровно так, как люблю Я — и никак иначе",
   "version": "1.0.0",
+  "publisher": "your-name",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Formatters"],
-  "activationEvents": ["onLanguage:sql"],
-  "main": "./out/extensions.js",
+  "categories": [
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onCommand:sql-my-formatter.formatMyWay"
+  ],
+  "main": "./src/extensions.js",
   "contributes": {
     "commands": [
       {
-        "command": "sqlMyWay.format",
+        "command": "sql-my-formatter.formatMyWay",
         "title": "SQL: Format My Way"
       }
     ],
     "keybindings": [
       {
-        "command": "sqlMyWay.format",
+        "command": "sql-my-formatter.formatMyWay",
         "key": "ctrl+alt+f",
         "mac": "cmd+alt+f",
         "when": "editorLangId == sql"
@@ -25,21 +32,18 @@
     "menus": {
       "editor/context": [
         {
-          "command": "sqlMyWay.format",
-          "group": "1_modification",
-          "when": "editorLangId == sql"
+          "command": "sql-my-formatter.formatMyWay",
+          "when": "editorLangId == sql",
+          "group": "1_modification"
         }
       ]
     }
   },
   "scripts": {
-    "compile": "tsc",
-    "prepackage": "npm run compile && sed -i '' 's|\"main\":.*|\"main\": \"./out/extensions.js\",|' package.json || true",
     "package": "vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "typescript": "^5.5.0",
-    "vsce": "^2.15.0"
+    "@vscode/vsce": "^2.32.0",
+    "undici": "^6.20.0"
   }
 }
