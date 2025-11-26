@@ -2,7 +2,7 @@
   "name": "sql-my-formatter",
   "displayName": "My Perfect SQL Formatter",
   "description": "Форматирует SQL ровно так, как люблю Я — и никак иначе",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "xutpuu",
   "engines": {
     "vscode": "^1.85.0"
